@@ -31,8 +31,8 @@ async function addRepo(user, repoName, uploadedFilePath, originalName) {
     // Copy file into staging area
     await fs.copyFile(uploadedFilePath, destPath);
 
-    // Remove temp uploaded file
-    await fs.unlink(uploadedFilePath).catch(() => {});
+    // Do not remove temp uploaded file as requested by the user
+    // await fs.unlink(uploadedFilePath).catch(() => {});
 
     console.log(
       `File ${fileName} added to staging area of repo '${repoName}' for user '${user}'.`
