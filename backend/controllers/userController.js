@@ -83,6 +83,8 @@ const signup = async (req, res) => {
       email,
       repositories: [],
       followedUsers: [],
+      following: [],
+      followers: [],
       startRepos: [],
     };
 
@@ -310,33 +312,42 @@ const followUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const targetObjId = new ObjectId(targetUserId);
+    const currentObjId = new ObjectId(currentUserId);
+
+    // Check status by converting all following items to string
+    const followingList = currentUser.following || [];
+    const isAlreadyFollowing = followingList.some(
+      (id) => id && id.toString() === targetUserId
+    );
+
     let isFollowing = false;
 
-    if (currentUser.following?.includes(targetUserId)) {
-      // Unfollow
+    if (isAlreadyFollowing) {
+      // Unfollow - pull both string and ObjectId formats to clean up legacy entries
       await usersCollection.updateOne(
-        { _id: new ObjectId(currentUserId) },
-        { $pull: { following: targetUserId } }
+        { _id: currentObjId },
+        { $pull: { following: { $in: [targetUserId, targetObjId] } } }
       );
       await usersCollection.updateOne(
-        { _id: new ObjectId(targetUserId) },
-        { $pull: { followers: currentUserId } }
+        { _id: targetObjId },
+        { $pull: { followers: { $in: [currentUserId, currentObjId] } } }
       );
     } else {
-      // Follow
+      // Follow - push as ObjectId
       await usersCollection.updateOne(
-        { _id: new ObjectId(currentUserId) },
-        { $addToSet: { following: targetUserId } }
+        { _id: currentObjId },
+        { $addToSet: { following: targetObjId } }
       );
       await usersCollection.updateOne(
-        { _id: new ObjectId(targetUserId) },
-        { $addToSet: { followers: currentUserId } }
+        { _id: targetObjId },
+        { $addToSet: { followers: currentObjId } }
       );
       isFollowing = true;
     }
 
     const updatedTarget = await usersCollection.findOne(
-      { _id: new ObjectId(targetUserId) },
+      { _id: targetObjId },
       { projection: { password: 0 } }
     );
 

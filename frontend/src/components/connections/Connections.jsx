@@ -36,6 +36,48 @@ const Connections = () => {
     navigate(`/user/${userId}`);
   };
 
+  const handleFollowToggle = async (e, targetUserId) => {
+    e.stopPropagation(); // Prevent card navigation
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId) return;
+
+    try {
+      const response = await fetch("http://localhost:3000/follow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ currentUserId, targetUserId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to follow/unfollow");
+
+      const data = await response.json();
+      
+      setUsers((prevUsers) =>
+        prevUsers.map((u) => {
+          if (u._id === targetUserId) {
+            const isFollowingNow = data.isFollowing;
+            let updatedFollowers = u.followers ? [...u.followers] : [];
+            if (isFollowingNow) {
+              if (!updatedFollowers.includes(currentUserId)) {
+                updatedFollowers.push(currentUserId);
+              }
+            } else {
+              updatedFollowers = updatedFollowers.filter(
+                (id) => id.toString() !== currentUserId
+              );
+            }
+            return { ...u, followers: updatedFollowers };
+          }
+          return u;
+        })
+      );
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -78,11 +120,15 @@ const Connections = () => {
                     onClick={() => handleUserClick(user._id)}
                   >
                     <div style={styles.userAvatar}>
-                      {user.profilePicture ? (
+                      {user.profilePicture && !user.profilePicture.includes("example.com") ? (
                         <img
                           src={user.profilePicture}
                           alt={user.username}
                           style={styles.avatarImage}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://avatars.githubusercontent.com/u/583231?v=4";
+                          }}
                         />
                       ) : (
                         <FaUser style={styles.avatarIcon} />
@@ -97,15 +143,37 @@ const Connections = () => {
                       )}
                     </div>
 
-                    <div style={styles.userStats}>
-                      <div style={styles.statItem}>
-                        <FaCode style={styles.statIcon} />
-                        <span style={styles.statText}>Repos</span>
+                    <div style={styles.cardFooter}>
+                      <div style={styles.userStats}>
+                        <div style={styles.statItem}>
+                          <FaCode style={styles.statIcon} />
+                          <span style={styles.statText}>
+                            {user.repositories?.length || 0} Repos
+                          </span>
+                        </div>
+                        <div style={styles.statItem}>
+                          <FaUsers style={styles.statIcon} />
+                          <span style={styles.statText}>
+                            {user.followers?.length || 0} Followers
+                          </span>
+                        </div>
                       </div>
-                      <div style={styles.statItem}>
-                        <FaEye style={styles.statIcon} />
-                        <span style={styles.statText}>View Profile</span>
-                      </div>
+                      <button
+                        onClick={(e) => handleFollowToggle(e, user._id)}
+                        className={
+                          user.followers?.some(
+                            (id) => id.toString() === localStorage.getItem("userId")
+                          )
+                            ? "unfollow-btn-card"
+                            : "follow-btn-card"
+                        }
+                      >
+                        {user.followers?.some(
+                          (id) => id.toString() === localStorage.getItem("userId")
+                        )
+                          ? "Unfollow"
+                          : "Follow"}
+                      </button>
                     </div>
                   </div>
                 ))
@@ -179,6 +247,16 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.3s ease",
     boxShadow: "0 6px 14px rgba(0,0,0,0.4)",
+    display: "flex",
+    flexDirection: "column",
+  },
+  cardFooter: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: "auto",
+    paddingTop: "16px",
+    borderTop: "1px solid #30363d",
   },
   userAvatar: {
     width: "60px",

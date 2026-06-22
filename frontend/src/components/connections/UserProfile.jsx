@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../Navbar";
-import { FaUser, FaCode, FaEye, FaStar, FaArrowLeft, FaSpinner } from "react-icons/fa";
+import { FaUser, FaCode, FaEye, FaStar, FaArrowLeft, FaSpinner, FaUsers } from "react-icons/fa";
 
 const UserProfile = () => {
   const { userId } = useParams();
@@ -44,6 +44,43 @@ const UserProfile = () => {
       console.error("Error fetching repositories:", err);
     } finally {
       setReposLoading(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    const currentUserId = localStorage.getItem("userId");
+    if (!currentUserId || !user) return;
+
+    try {
+      const response = await fetch("http://localhost:3000/follow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ currentUserId, targetUserId: userId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to follow/unfollow user");
+
+      const data = await response.json();
+      
+      setUser((prevUser) => {
+        if (!prevUser) return null;
+        const isFollowingNow = data.isFollowing;
+        let updatedFollowers = prevUser.followers ? [...prevUser.followers] : [];
+        if (isFollowingNow) {
+          if (!updatedFollowers.includes(currentUserId)) {
+            updatedFollowers.push(currentUserId);
+          }
+        } else {
+          updatedFollowers = updatedFollowers.filter(
+            (id) => id.toString() !== currentUserId
+          );
+        }
+        return { ...prevUser, followers: updatedFollowers };
+      });
+    } catch (err) {
+      console.error("Error toggling follow:", err);
     }
   };
 
@@ -100,19 +137,58 @@ const UserProfile = () => {
           <div style={styles.profileCard}>
             <div style={styles.profileHeader}>
               <div style={styles.avatarContainer}>
-                {user.profilePicture ? (
+                {user.profilePicture && !user.profilePicture.includes("example.com") ? (
                   <img
                     src={user.profilePicture}
                     alt={user.username}
                     style={styles.avatar}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://avatars.githubusercontent.com/u/583231?v=4";
+                    }}
                   />
                 ) : (
                   <FaUser style={styles.avatarIcon} />
                 )}
               </div>
               <div style={styles.profileInfo}>
-                <h1 style={styles.username}>{user.username || "Unknown User"}</h1>
+                <div style={styles.nameFollowRow}>
+                  <h1 style={styles.username}>{user.username || "Unknown User"}</h1>
+                  <button
+                    onClick={handleFollowToggle}
+                    className={
+                      user.followers?.some(
+                        (id) => id.toString() === localStorage.getItem("userId")
+                      )
+                        ? "unfollow-btn-card"
+                        : "follow-btn-card"
+                    }
+                    style={{ marginLeft: "16px", padding: "8px 16px", fontSize: "14px" }}
+                  >
+                    {user.followers?.some(
+                      (id) => id.toString() === localStorage.getItem("userId")
+                    )
+                      ? "Unfollow"
+                      : "Follow"}
+                  </button>
+                </div>
                 <p style={styles.userEmail}>{user.email}</p>
+                
+                <div style={styles.followStatsRow}>
+                  <div style={styles.followStatItem}>
+                    <FaUsers style={{ color: "#58a6ff", marginRight: "6px" }} />
+                    <span style={styles.followStatText}>
+                      <strong>{user.followers?.length || 0}</strong> followers
+                    </span>
+                  </div>
+                  <div style={styles.followStatItem}>
+                    <FaUser style={{ color: "#58a6ff", marginRight: "6px" }} />
+                    <span style={styles.followStatText}>
+                      <strong>{user.following?.length || 0}</strong> following
+                    </span>
+                  </div>
+                </div>
+
                 {user.bio && (
                   <p style={styles.userBio}>{user.bio}</p>
                 )}
@@ -189,6 +265,28 @@ const UserProfile = () => {
 };
 
 const styles = {
+  nameFollowRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    flexWrap: "wrap",
+    marginBottom: "8px",
+  },
+  followStatsRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "24px",
+    marginBottom: "16px",
+  },
+  followStatItem: {
+    display: "flex",
+    alignItems: "center",
+    fontSize: "14px",
+    color: "#8b949e",
+  },
+  followStatText: {
+    fontWeight: "500",
+  },
   container: {
     minHeight: "100vh",
     background: "#0d1117",

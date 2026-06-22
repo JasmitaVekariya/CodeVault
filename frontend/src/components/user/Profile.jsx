@@ -7,7 +7,7 @@ import { useAuth } from "../../authContext";
 // --- CHANGED IMPORTS ---
 import { UnderlineNav } from "@primer/react"; 
 import { BookIcon, RepoIcon } from "@primer/octicons-react";
-import { FaUser, FaEnvelope, FaCode, FaStar, FaEye, FaCodeBranch, FaSignOutAlt, FaEdit, FaHistory } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaCode, FaStar, FaEye, FaCodeBranch, FaSignOutAlt, FaEdit, FaHistory, FaUsers } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -134,9 +134,13 @@ const Profile = () => {
               <div style={styles.profileImage}>
                 {/* --- THIS IS THE CHANGED LINE --- */}
                 <img
-                  src="https://avatars.githubusercontent.com/u/583231?v=4"
+                  src={userDetails.profilePicture && !userDetails.profilePicture.includes("example.com") ? userDetails.profilePicture : "https://avatars.githubusercontent.com/u/583231?v=4"}
                   alt="Profile"
                   style={styles.avatar}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://avatars.githubusercontent.com/u/583231?v=4";
+                  }}
                 />
               </div>
               <h2 style={styles.username}>{userDetails.username}</h2>
@@ -161,6 +165,20 @@ const Profile = () => {
                       {repositories.reduce((sum, repo) => sum + (repo.stars || 0), 0)}
                     </div>
                     <div style={styles.statLabel}>Stars</div>
+                  </div>
+                </div>
+                <div style={styles.statItem}>
+                  <FaUsers style={styles.statIcon} />
+                  <div>
+                    <div style={styles.statNumber}>{userDetails.followers?.length || 0}</div>
+                    <div style={styles.statLabel}>Followers</div>
+                  </div>
+                </div>
+                <div style={styles.statItem}>
+                  <FaUser style={styles.statIcon} />
+                  <div>
+                    <div style={styles.statNumber}>{userDetails.following?.length || 0}</div>
+                    <div style={styles.statLabel}>Following</div>
                   </div>
                 </div>
               </div>
@@ -374,8 +392,9 @@ const styles = {
     fontSize: "14px",
   },
   statsContainer: {
-    display: "flex",
-    justifyContent: "space-around",
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
     marginBottom: "24px",
     padding: "20px 0",
     borderTop: "1px solid #30363d",

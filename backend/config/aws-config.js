@@ -44,16 +44,39 @@ if (process.env.USE_LOCAL_S3 === 'true') {
 
     deleteObjects: (params) => ({
       promise: async () => {
+        const deletedDirs = new Set();
         for (const obj of params.Delete.Objects) {
           const fullPath = path.join(localS3Dir, params.Bucket, obj.Key);
           try {
              const stats = await fsPromises.stat(fullPath);
              if (stats.isDirectory()) {
                 await fsPromises.rm(fullPath, { recursive: true, force: true });
+                deletedDirs.add(path.dirname(fullPath));
              } else {
                 await fsPromises.unlink(fullPath);
+                deletedDirs.add(path.dirname(fullPath));
              }
           } catch (err) {}
+        }
+
+        // Clean up empty parent directories recursively (deepest first)
+        const sortedDirs = Array.from(deletedDirs).sort((a, b) => b.length - a.length);
+        for (const dir of sortedDirs) {
+          let currentDir = dir;
+          const bucketDir = path.join(localS3Dir, params.Bucket);
+          while (currentDir && currentDir !== bucketDir && currentDir.startsWith(bucketDir)) {
+            try {
+              const files = await fsPromises.readdir(currentDir);
+              if (files.length === 0) {
+                await fsPromises.rmdir(currentDir);
+                currentDir = path.dirname(currentDir);
+              } else {
+                break;
+              }
+            } catch (err) {
+              break;
+            }
+          }
         }
         return {};
       }
