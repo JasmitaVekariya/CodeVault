@@ -6,6 +6,50 @@ const { initRepo } = require("./init.js");
 const { renameRepoFolder } = require("./updateRepo.js");
 const { deleteRepoFolder } = require("./deleteRepo.js");
 
+
+// Create repository directly (for CLI usage)
+async function createRepositoryDirect(ownerId, repoName, description = "", visibility = true) {
+    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+        throw new Error("Invalid owner ID");
+    }
+
+    if (!repoName) {
+        throw new Error("Repository name is required");
+    }
+
+    try {
+        const user = await User.findById(ownerId);
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        // Check if repo with same name exists
+        const existingRepo = await Repository.findOne({ owner: user._id, name: repoName });
+        if (existingRepo) {
+            throw new Error("A repository with this name already exists");
+        }
+
+        const repository = new Repository({
+            owner: user._id,
+            name: repoName,
+            content: [],
+            description,
+            visibility,
+        });
+
+        const result = await repository.save();
+
+        user.repositories.push(result._id);
+        await user.save();
+
+        console.log(`✅ Repository '${repoName}' added to database for user '${user.username}'`);
+        return result;
+    } catch (error) {
+        console.error("Error creating repository in DB:", error.message);
+        throw error;
+    }
+}
+
 // Create a new repository
 async function createRepository(req, res) {
     const { owner, name, content, description, visibility } = req.body;
@@ -295,4 +339,5 @@ module.exports = {
     updateRepositoryByID,
     deleteRepositoryByID,
     toggleVisibilityByID,
+    createRepositoryDirect,
 };

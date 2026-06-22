@@ -14,8 +14,30 @@ async function pushRepo(user, repoName) {
       return;
     }
 
-    // Upload each commit to S3 (no local modification)
-    for (const commitDir of commitDirs) {
+    // Get already pushed commits from S3
+    const existingCommits = await s3
+      .listObjectsV2({
+        Bucket: S3_BUCKET,
+        Prefix: `${user}/${repoName}/commits/`,
+        Delimiter: "/",
+      })
+      .promise();
+
+    const uploadedCommitDirs = new Set(
+      (existingCommits.CommonPrefixes || []).map((p) =>
+        p.Prefix.split("/").filter(Boolean).pop()
+      )
+    );
+
+    // Filter only new commits
+    const newCommits = commitDirs.filter((dir) => !uploadedCommitDirs.has(dir));
+    if (newCommits.length === 0) {
+      console.log("✅ All commits already pushed.");
+      return;
+    }
+
+    // Upload only new commits
+    for (const commitDir of newCommits) {
       const commitPath = path.join(commitsPath, commitDir);
       const files = await fs.readdir(commitPath);
 

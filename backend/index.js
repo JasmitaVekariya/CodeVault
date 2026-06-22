@@ -24,15 +24,23 @@ dotenv.config();
 
 yargs(hideBin(process.argv))
   .command("start", "Start a new server", {}, startServer) // This will call the startServer function when the 'start' command is used
-  .command("userInit <user>",
+  .command("userInit <user> <pass> <email>",
     "Initialize a user in .github_clone on S3",
     (yargs) => {
       yargs.positional("user", {
         describe: "User name",
         type: "string",
       });
+      yargs.positional("pass", {
+        describe: "password",
+        type: "string",
+      });
+      yargs.positional("email", {
+        describe: "email address",
+        type: "string",
+      });
     },
-    (argv) => userInit(argv.user)
+    (argv) => userInit(argv.user, argv.pass, argv.email)
   )
   .command("init <user> <repo>", "Initialise a new repository", (yargs) => {
     yargs.positional("repo", {

@@ -20,6 +20,41 @@ async function connectClient() {
   return client;
 }
 
+
+async function createUserDirect(username, password, email) {
+  await connectClient();
+  const db = client.db("githubclone");
+  const usersCollection = db.collection("users");
+
+  // Check if user already exists
+  const existing = await usersCollection.findOne({
+    $or: [{ username }, { email }],
+  });
+  if (existing) throw new Error("User or email already exists");
+
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const newUser = {
+    username,
+    password: hashedPassword,
+    email,
+    repositories: [],
+    followedUsers: [],
+    following: [],
+    followers: [],
+    starredRepos: [],
+    profilePicture: "https://example.com/default-profile-picture.png",
+    bio: "",
+    createdAt: new Date(),
+  };
+
+  const result = await usersCollection.insertOne(newUser);
+  console.log(`✅ User '${username}' added to MongoDB`);
+  return result.insertedId;
+}
+
 const signup = async (req, res) => {
   const { username, password, email } = req.body;
   try {
@@ -470,6 +505,7 @@ const getStarredRepos = async (req, res) => {
 
 module.exports = {
   getAllUsers,
+  createUserDirect,
   signup,
   login,
   getUserProfile,
