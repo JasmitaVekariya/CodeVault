@@ -75,8 +75,16 @@ async function pushRepo(user, repoName) {
       console.log(`✅ Pushed commit ${commitDir} (${commitMeta.message})`);
     }
 
-    // Update HEAD pointer
-    const latestCommit = commitDirs[commitDirs.length - 1];
+    // Update HEAD pointer by finding the latest commit by modification time
+    const commitsWithStats = await Promise.all(
+      commitDirs.map(async (dir) => {
+        const fullPath = path.join(commitsPath, dir);
+        const stats = await fs.stat(fullPath);
+        return { dir, mtime: stats.mtime };
+      })
+    );
+    commitsWithStats.sort((a, b) => b.mtime - a.mtime);
+    const latestCommit = commitsWithStats[0].dir;
     const headData = { branch: "main", latestCommit };
 
     await s3
@@ -108,8 +116,18 @@ async function getCommittedFiles(user, repoName) {
   const commitsPath = path.join(repoPath, "commits");
 
   try {
-    const commitDirs = await fs.readdir(commitsPath);
-    commitDirs.sort((a, b) => Number(a) - Number(b)); // Sort ascending
+    let commitDirs = await fs.readdir(commitsPath);
+    
+    // Sort commits chronologically (ascending) by modification time
+    const dirsWithStats = await Promise.all(
+      commitDirs.map(async (dir) => {
+        const fullPath = path.join(commitsPath, dir);
+        const stats = await fs.stat(fullPath);
+        return { dir, mtime: stats.mtime };
+      })
+    );
+    dirsWithStats.sort((a, b) => a.mtime - b.mtime);
+    commitDirs = dirsWithStats.map(d => d.dir);
 
     const commits = [];
 

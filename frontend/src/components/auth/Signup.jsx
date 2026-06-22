@@ -16,6 +16,11 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    if (/\s/.test(username)) {
+      alert("Username cannot contain spaces!");
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await axios.post("http://localhost:3000/signup", {

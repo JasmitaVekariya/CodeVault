@@ -18,6 +18,12 @@ const CreateRepo = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (/\s/.test(name)) {
+      alert("Repository name cannot contain spaces!");
+      return;
+    }
+
     try {
       const owner = localStorage.getItem("userId");
       const response = await axios.post("http://localhost:3000/repo/create", {

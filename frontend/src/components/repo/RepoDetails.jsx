@@ -17,6 +17,7 @@ import {
   FaDownload,
   FaCodeBranch, // Added for stats
   FaEye, // Added for stats
+  FaTrash, // Added for delete
 } from "react-icons/fa";
 import axios from "axios";
 import FileUploadCommit from "./filesAdding"; // This component is still imported
@@ -157,6 +158,28 @@ const handleRevert = async (commitId) => {
   }
 };
 
+const handleDeleteRepo = async () => {
+  if (!repo?.name) return;
+
+  const confirmDelete = window.confirm(
+    `⚠️ Are you sure you want to permanently delete the repository "${repo.name}"? This action cannot be undone.`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    const response = await api.delete(`/repo/delete/${id}`);
+    if (response.status === 200 || response.data?.message) {
+      alert("✅ Repository deleted successfully.");
+      navigate("/"); // Go back to dashboard/home
+    } else {
+      alert("❌ Failed to delete repository.");
+    }
+  } catch (err) {
+    console.error("Error deleting repository:", err);
+    alert("⚠️ An error occurred while deleting the repository.");
+  }
+};
+
 
   useEffect(() => {
     const fetchRepo = async () => {
@@ -267,13 +290,22 @@ const handleRevert = async (commitId) => {
           {/* Actions Row (From Simple, logic from Complex) */}
           <div style={styles.actionRow}>
             {repo?.owner?._id?.toString() === userId && (
-              <div
-                style={styles.actionItem}
-                onClick={() => navigate(`/repository/update/${repo._id}`)}
-              >
-                <FaSyncAlt size={16} style={styles.icon} />
-                Update Repository
-              </div>
+              <>
+                <div
+                  style={styles.actionItem}
+                  onClick={() => navigate(`/repository/update/${repo._id}`)}
+                >
+                  <FaSyncAlt size={16} style={styles.icon} />
+                  Update Repository
+                </div>
+                <div
+                  style={{ ...styles.actionItem, color: "#f85149", borderColor: "#f85149" }}
+                  onClick={handleDeleteRepo}
+                >
+                  <FaTrash size={16} color="#f85149" />
+                  Delete Repository
+                </div>
+              </>
             )}
             <div
               style={styles.actionItem}

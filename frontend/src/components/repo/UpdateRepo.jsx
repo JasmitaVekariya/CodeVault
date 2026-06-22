@@ -226,6 +226,11 @@ const UpdateRepository = () => {
     setError(null);
     setMessage(null);
 
+    if (/\s/.test(name)) {
+      setError("Repository name cannot contain spaces!");
+      return;
+    }
+
     try {
       const response = await fetch(`http://localhost:3000/repo/update/${id}`, {
         method: "PUT",

@@ -17,6 +17,10 @@ async function createRepositoryDirect(ownerId, repoName, description = "", visib
         throw new Error("Repository name is required");
     }
 
+    if (/\s/.test(repoName)) {
+        throw new Error("Repository name cannot contain spaces");
+    }
+
     try {
         const user = await User.findById(ownerId);
         if (!user) {
@@ -60,6 +64,10 @@ async function createRepository(req, res) {
 
     if (!name) {
         return res.status(400).send("Repository name is required");
+    }
+
+    if (/\s/.test(name)) {
+        return res.status(400).send("Repository name cannot contain spaces");
     }
 
     try {
@@ -222,6 +230,10 @@ async function updateRepositoryByID(req, res) {
         return res.status(400).send("Invalid repository ID format");
     }
 
+    if (name && /\s/.test(name)) {
+        return res.status(400).send("Repository name cannot contain spaces");
+    }
+
     try {
         const repository = await Repository.findById(id)
             .populate("owner")
@@ -281,13 +293,14 @@ async function deleteRepositoryByID(req, res) {
     }
 
     try {
-        const repository = await Repository.findByIdAndDelete(id);
+        const repository = await Repository.findById(id).populate("owner");
 
         if (!repository) {
             return res.status(404).send("Repository not found");
         }
 
         await deleteRepoFolder(repository.owner.username, repository.name);
+        await Repository.findByIdAndDelete(id);
 
         res.status(200).json({
             message: "Repository deleted successfully",

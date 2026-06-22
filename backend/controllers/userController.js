@@ -26,6 +26,10 @@ async function createUserDirect(username, password, email) {
   const db = client.db("githubclone");
   const usersCollection = db.collection("users");
 
+  if (/\s/.test(username)) {
+    throw new Error("Username cannot contain spaces");
+  }
+
   // Check if user already exists
   const existing = await usersCollection.findOne({
     $or: [{ username }, { email }],
@@ -57,6 +61,9 @@ async function createUserDirect(username, password, email) {
 
 const signup = async (req, res) => {
   const { username, password, email } = req.body;
+  if (/\s/.test(username)) {
+    return res.status(400).json({ message: "Username cannot contain spaces" });
+  }
   try {
     await connectClient();
     const db = client.db("githubclone");
@@ -238,6 +245,10 @@ const { updateUserFolder } = require("../controllers/updateUser.js");
 const updateUserProfile = async (req, res) => {
   const currentID = req.params.id;
   const { bio, profilePicture, username } = req.body; // include username
+
+  if (username && /\s/.test(username)) {
+    return res.status(400).json({ message: "Username cannot contain spaces" });
+  }
 
   try {
     await connectClient();

@@ -1,0 +1,7 @@
+codevault userInit Rohit Rohit rohit@gmail.com
+codevault init Rohit TestRepo
+codevault add Rohit TestRepo temp.txt
+codevault commit Rohit TestRepo "Added temp.txt"
+codevault push Rohit TestRepo
+codevault pull Rohit TestRepo
+codevault revert Rohit TestRepo <commit_id>
