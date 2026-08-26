@@ -29,10 +29,12 @@ The architecture is divided into three main components:
 *   **Other Utilities:** `uuid` (for generating unique commit IDs), `fs.promises` (for asynchronous file system operations).
 
 ## 4. Database Structure
-The project uses MongoDB with the following core collections (schemas):
-*   **User (`userModel.js`):** Stores `username`, `email`, `password` (hashed), `bio`, `profilePicture`, `repositories` (array of ObjectIds), `followedUsers`, `starredRepos`.
-*   **Repository (`repoModel.js`):** Stores `name`, `description`, `owner` (ObjectId linking to User), `stars`, `content` (array), `visibility` (Boolean), `issues` (array of ObjectIds). Includes a compound unique index on `{ owner, name }`.
-*   **Issue (`issuesModel.js`):** (Inferred) Stores issue tracking information related to a specific repository.
+The project uses MongoDB with a relational-like schema designed via Mongoose. A detailed Entity-Relationship (ER) diagram mapping fields, data types, keys, and indexes is documented in [er_diagram.md](file:///Users/apple/Jasmita_Vekariya/Sem%205/AT/CodeVault/implementation/er_diagram.md).
+
+Core collections:
+*   **User (`userModel.js`):** Stores `username`, `email`, `password` (hashed), `bio`, `profilePicture`, `repositories` (array of ObjectIds linking to Repository), `following` / `followers` (arrays of ObjectIds referencing other Users), and `starredRepos` (array of ObjectIds linking to Repository).
+*   **Repository (`repoModel.js`):** Stores `name`, `description`, `owner` (ObjectId linking to User), `stars`, `content` (array of paths), `visibility` (Boolean), and `issues` (array of ObjectIds linking to Issue). Includes a compound unique index on `{ owner, name }` to prevent duplicate repository names per user.
+*   **Issue (`issuesModel.js`):** Stores issue tracking information: `title`, `description`, `status` (open/closed), and `repository` (ObjectId referencing Repository).
 
 ## 5. Core Features and How Each Feature Works Internally
 *   **Custom Version Control (Local):** Instead of using `.git`, the system initializes a `.github_clone` directory containing user and repository folders. Inside, it maintains a `staging` directory for uncommitted changes and a `commits` directory containing snapshots.
@@ -41,7 +43,7 @@ The project uses MongoDB with the following core collections (schemas):
 *   **Repository Management:** Full CRUD capabilities for repositories through the Express API, reflecting changes both in MongoDB and local/S3 folders.
 
 ## 6. Command Implementation Details
-The CLI is defined in `backend/index.js` using `yargs`:
+The CLI is defined in `backend/index.js` using `yargs`. It can be run directly using `node index.js <command>` or linked globally as a shell command using `npm link` inside the `backend/` directory to run natively as `codevault <command>` (mimicking native Git execution):
 *   `init <user> <repo>`: Creates the local directory structure (`.github_clone/<user>/<repo>/commits`). Creates a local `config.json` linking to the S3 bucket. Creates a dummy object in S3 to represent the remote folder.
 *   `add <user> <repo> <file>`: Copies the specified file into `.github_clone/<user>/<repo>/staging`.
 *   `commit <user> <repo> <message>`: Generates a new UUID for the commit. Copies all files from the *latest previous commit* into the new commit directory, then overwrites/adds files from the `staging` directory. Clears the `staging` directory. Saves metadata in `commit.json`.

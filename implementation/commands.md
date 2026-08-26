@@ -5,10 +5,24 @@ This document describes how to execute the custom version control CLI commands, 
 ---
 
 ## 1. CLI Entrypoint
-All CLI commands are executed from the backend directory using Node.js. The CLI uses the `yargs` library to parse commands, options, and positional arguments.
+All CLI commands can be executed in two ways:
 
+### Option A: Native Global Binary (Recommended)
+Because of the `"bin": { "codevault": "./index.js" }` configuration in `package.json` and the shebang `#!/usr/bin/env node` in `index.js`, you can link the binary globally.
+
+1. Navigate to the `backend/` directory in your terminal.
+2. Run the linking command:
+   ```bash
+   npm link
+   ```
+3. Now you can run commands directly using `codevault` from any directory:
+   ```bash
+   codevault <command> <arguments>
+   ```
+
+### Option B: Direct Node.js Invocation
+Alternatively, you can run commands directly inside the `backend/` directory using Node.js:
 ```bash
-# Execute directly via Node.js
 node index.js <command> <arguments>
 ```
 
@@ -20,7 +34,8 @@ node index.js <command> <arguments>
 Starts the Express API server and establishes database/WebSocket connections.
 * **Usage:**
   ```bash
-  node index.js start
+  codevault start
+  # OR: node index.js start
   ```
 * **Internal mechanism:**
   1. Starts an Express application server listening on the configured `PORT` (default `3000`).
@@ -33,7 +48,8 @@ Starts the Express API server and establishes database/WebSocket connections.
 Creates a new user profile locally and/or in S3.
 * **Usage Example:**
   ```bash
-  node index.js userInit alice securepass123 alice@example.com
+  codevault userInit alice securepass123 alice@example.com
+  # OR: node index.js userInit alice securepass123 alice@example.com
   ```
 
 ---
@@ -42,7 +58,8 @@ Creates a new user profile locally and/or in S3.
 Initializes a new local repository and connects it to a remote database and S3 folder.
 * **Usage Example:**
   ```bash
-  node index.js init alice my-react-app
+  codevault init alice my-react-app
+  # OR: node index.js init alice my-react-app
   ```
 * **Internal mechanism:**
   1. Connects to MongoDB to find the user `alice`. If the user exists, it creates a new repository entry in the database.
@@ -57,7 +74,8 @@ Initializes a new local repository and connects it to a remote database and S3 f
 Stages a file for the next commit by moving it to the repository's local staging area.
 * **Usage Example:**
   ```bash
-  node index.js add alice my-react-app App.jsx
+  codevault add alice my-react-app App.jsx
+  # OR: node index.js add alice my-react-app App.jsx
   ```
 * **Internal mechanism:**
   1. Resolves the path to `.github_clone/alice/my-react-app/staging`.
@@ -71,7 +89,8 @@ Stages a file for the next commit by moving it to the repository's local staging
 Takes a snapshot of the repository, combining the previous commit's files with the newly staged files.
 * **Usage Example:**
   ```bash
-  node index.js commit alice my-react-app "Initial project structure"
+  codevault commit alice my-react-app "Initial project structure"
+  # OR: node index.js commit alice my-react-app "Initial project structure"
   ```
 * **Internal mechanism:**
   1. **Generate UUID:** Generates a new unique `UUID v4` to serve as the commit ID.
@@ -100,7 +119,8 @@ Takes a snapshot of the repository, combining the previous commit's files with t
 Syncs local commits to AWS S3 remote storage.
 * **Usage Example:**
   ```bash
-  node index.js push alice my-react-app
+  codevault push alice my-react-app
+  # OR: node index.js push alice my-react-app
   ```
 * **Internal mechanism:**
   1. Reads all commit folders inside `.github_clone/alice/my-react-app/commits/`.
@@ -116,7 +136,8 @@ Syncs local commits to AWS S3 remote storage.
 Downloads all remote commits from S3 to update local repository history.
 * **Usage Example:**
   ```bash
-  node index.js pull alice my-react-app
+  codevault pull alice my-react-app
+  # OR: node index.js pull alice my-react-app
   ```
 * **Internal mechanism:**
   1. Queries S3 using `listObjectsV2` with prefix `alice/my-react-app/commits/` to find all remote files.
@@ -130,7 +151,8 @@ Downloads all remote commits from S3 to update local repository history.
 Reverts the repository file tree to the exact state of a specified commit ID.
 * **Usage Example:**
   ```bash
-  node index.js revert alice my-react-app 550e8400-e29b-41d4-a716-446655440000
+  codevault revert alice my-react-app 550e8400-e29b-41d4-a716-446655440000
+  # OR: node index.js revert alice my-react-app 550e8400-e29b-41d4-a716-446655440000
   ```
 * **Internal mechanism:**
   1. Checks if the target commit folder exists under `.github_clone/alice/my-react-app/commits/<commit_id>`.
@@ -146,9 +168,9 @@ Here is a visual map of how a file moves through version control operations:
 
 ```mermaid
 graph TD
-    WorkingDir[Working Directory] -->|node index.js add| Staging[Staging Folder: .github_clone/.../staging]
-    Staging -->|node index.js commit| NewCommit[New Commit Folder: .github_clone/.../commits/UUID]
+    WorkingDir[Working Directory] -->|codevault add| Staging[Staging Folder: .github_clone/.../staging]
+    Staging -->|codevault commit| NewCommit[New Commit Folder: .github_clone/.../commits/UUID]
     PrevCommit[Previous Commit Folder] -->|Copy Files first| NewCommit
     Staging -->|Overwrite matching files/Delete staging source| NewCommit
-    NewCommit -->|node index.js push| S3Remote[AWS S3 Bucket: githubcolnebucket]
+    NewCommit -->|codevault push| S3Remote[AWS S3 Bucket: githubcolnebucket]
 ```

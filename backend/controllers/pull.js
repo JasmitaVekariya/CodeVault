@@ -22,7 +22,7 @@ async function pullRepo(user, repoName) {
     // 2. Iterate over all objects (files) in this repo's commits
     for (const object of data.Contents) {
       const key = object.Key; // e.g. alice/myrepo/commits/123456/file.txt
-      const relativePath = key.replace(`${user}/${repoName}/`, ""); 
+      const relativePath = key.replace(`${user}/${repoName}/`, "");
       const localPath = path.join(repoPath, relativePath);
 
       // Ensure directory exists before writing

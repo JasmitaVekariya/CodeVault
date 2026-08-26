@@ -39,8 +39,26 @@ const realS3 = new AWS.S3();
 const S3_BUCKET = "githubcolnebucket";
 ```
 
-> [!NOTE]
-> When `USE_LOCAL_S3` is set to `true`, the system redirects S3 API calls (`putObject`, `upload`, `getObject`, `listObjectsV2`, `deleteObjects`, `copyObject`) to use a local folder named `local_s3_bucket` under the workspace root, simulating S3 operations via Node's `fs` module.
+### 2.1 Local S3 Mock Implementation
+When `USE_LOCAL_S3` is set to `true` in the `.env` file, CodeVault instantiates a mock S3 object instead of the real AWS S3 client. This allows the application to run fully offline without any AWS credentials or cloud costs.
+
+#### Key Characteristics of the Local Mock:
+1. **Mock Promise Wrapping:** The AWS SDK v2 client requires methods to chain `.promise()` (e.g., `s3.putObject(params).promise()`). The mock replicates this behavior by wrapping all disk calls inside objects with a matching `promise` method:
+   ```javascript
+   putObject: (params) => ({
+     promise: async () => {
+       // local fs write operations
+       return {};
+     }
+   })
+   ```
+2. **Directory Mapping:** It reads and writes objects to a directory named `local_s3_bucket/` at the project root. S3 buckets are represented as top-level subfolders, and object keys are represented as nested file paths.
+3. **API Methods Simulated:**
+   * **`putObject` / `upload`**: Creates parent directories (`fs.mkdir` recursively) and writes the body to a file (`fs.writeFile`).
+   * **`getObject`**: Reads files from the local mock folder. Importantly, it provides a `createReadStream()` method returning `fs.createReadStream()` to support streaming downloads of zipped commits.
+   * **`listObjectsV2`**: Simulates prefix filtering and delimiter directory splits. It performs a recursive directory walk (`walk()`) starting at the path corresponding to the search prefix, and maps folder/file results into `Contents` (arrays of file keys) and `CommonPrefixes` (representing directories).
+   * **`deleteObjects`**: Deletes target files/folders and recursively prunes empty parent directories up to the bucket root path.
+   * **`copyObject`**: Copies files/directories locally to emulate copying remote S3 configurations.
 
 ---
 

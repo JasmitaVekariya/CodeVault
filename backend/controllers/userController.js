@@ -535,5 +535,5 @@ module.exports = {
   deleteUserProfile,
   toggleStarRepo,
   getStarredRepos,
-   followUser
+  followUser
 };
